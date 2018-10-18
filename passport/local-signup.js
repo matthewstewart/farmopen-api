@@ -8,17 +8,24 @@ module.exports = new PassportLocalStrategy({
   session: false,
   passReqToCallback: true
 }, (req, username, password, done) => {
-  
-  const userData = {
-    username: username.trim(),
-    password: password.trim(),
-  };
-    
-  const newUser = new User(userData);
-  newUser.save((err) => {
-    if (err) { return done(err); }
+  User
+  .find({})
+  .exec((error, users) => {
+    if (error) { return done(error, null); }
+    const userData = {
+      username: username.trim(),
+      password: password.trim(),
+      isAdmin: users.length === 0 ? true : false,
+      email: req.body.email,
+      name: req.body.name,
+      imageUrl: req.body.imageUrl
+    };
+      
+    const newUser = new User(userData);
+    newUser.save((err, user) => {
+      if (err) { return done(err, user); }
 
-    return done(null);
+      return done(null, user);
+    });  
   });
-
 });

@@ -6,15 +6,34 @@ const bearerToken = require('express-bearer-token');
 const jwt = require('jsonwebtoken');
 
 // load the config file if no database unique resource identifier is present
-if (!process.env.DB_URI){ require('./config/env.js'); }
+if (!process.env.DB_URI) { 
+	require('./config/env.js'); 
+}
 
 // set port to the environment variable settings or 3000 if none exist
 const port = process.env.PORT || 3000; 
 
 // connect to db using environment variables
-const databaseConnectionString = 'mongodb://' + process.env.DB_USERNAME + ':' + process.env.DB_PASSWORD + '@' + process.env.DB_URI;
+let databaseConnectionString = `mongodb://${process.env.DB_USERNAME}:${
+  process.env.DB_PASSWORD
+}@`;
+
+if (process.env.NODE_ENV === "test") {
+  databaseConnectionString += `${process.env.DB_TEST_URI}`;
+} else {
+  databaseConnectionString += `${process.env.DB_URI}`;
+}
+
 mongoose.Promise = global.Promise;
-mongoose.connect(databaseConnectionString);
+
+const dbOptions = {
+  server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } }
+};
+
+mongoose.connect(
+  databaseConnectionString,
+  dbOptions
+);
 
 // instantiate express app
 const app = express();
@@ -59,7 +78,12 @@ require('./routes/auth.js')(app, passport);
 // api routes
 require('./routes/api.js')(app);
 
+// users routes
+require('./routes/users.js')(app, passport);
+
 // launch server
 app.listen(port, () => {
 	console.log(`API running on port ${port}`);
 });
+
+module.exports = app;
